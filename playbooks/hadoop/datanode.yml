@@ -1,0 +1,71 @@
+- hosts: datanode
+  tasks:
+    - name: installing wget
+      package:
+        name: wget
+        state: present
+
+    - name : Copying JDK
+      get_url:
+        url: "https://files-cdn.liferay.com/mirrors/download.oracle.com/otn-pub/java/jdk/7u80-b15/jdk-7u80-linux-x64.rpm"
+        dest: /root/jdk-7u80-linux-x64.rpm
+    
+    - name : Copying Hadoop
+      get_url:
+        url: "https://archive.apache.org/dist/hadoop/common/hadoop-1.2.1/hadoop-1.2.1-1.x86_64.rpm"
+        dest: /root/hadoop-1.2.1-1.x86_64.rpm
+
+    - name: Installing JDK
+      command:
+        cmd: "rpm -i /root/jdk-7u80-linux-x64.rpm"
+      ignore_errors: yes
+
+    - name: Installing Hadoop
+      command:
+        cmd: "rpm -i /root/hadoop-1.2.1-1.x86_64.rpm --force"
+      ignore_errors: yes
+
+- hosts: datanode
+  vars:
+    - node: data
+    - dir: '/dn'
+    - IP_Namenode: "{{namenode}}" 
+    - states:
+      - absent
+      - directory
+    - com:
+      - "hadoop-daemon.sh stop datanode"
+      - "hadoop-daemon.sh start datanode"
+
+  tasks:
+    - name: Creating Datanode Directory
+      file:
+        path: "{{ dir }}"
+        state: "{{ item }}"
+      ignore_errors: yes
+      loop: "{{  states }}"
+
+    - name: configuring hdfs file
+      template:
+        src: "hdfs-site.xml"
+        dest: /etc/hadoop/hdfs-site.xml
+
+    - name: configuring core file
+      template:
+        src: "core-site.xml"
+        dest: /etc/hadoop/core-site.xml
+
+    - name: Starting Datanode
+      command:
+        cmd: "{{ item }}"
+      ignore_errors: yes
+      loop: "{{ com }}"
+    
+    - name: Getting Report-2
+      command:
+        cmd: "hadoop dfsadmin -report"
+      register: d
+    
+    - name: Report-2
+      debug:
+        var: d['stdout_lines']

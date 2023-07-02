@@ -1,0 +1,7 @@
+
+*hcl
+modules.json
+.terraform/
+*tfstate*
+
+
